@@ -1,254 +1,927 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-Developer : wiz64 ,
-Contribute: https://github.com/wiz64/saavn-web-ui ,
-Don't forget to star the repo
+Enhanced Version 2.1
+Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern UI
 -->
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
-    <title>Saavn Music Player</title>
-    <meta name="description" content="Saavn Music Player is an Ad-Free Music Player, High Quality MP3 Songs with Metadata support, and a Modern Design. A large library of songs. developed by wiz64">
+    <title>Saavn Telugu Player</title>
+    <meta name="description" content="Saavn Music Player with Custom Controls and Telugu Content">
+    
+    <!-- Bootstrap -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.1/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Bitter:400,700">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,700">
-    <link rel="stylesheet" href="assets/css/styles.css">
+    
+    <!-- Google Fonts: Poppins for clean modern look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Icons (Phosphor Icons for cleaner look) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        :root {
+            --primary: #ff4b2b; /* Vibrant Red-Orange */
+            --primary-dark: #e03e20;
+            --bg-dark: #0f0f0f;
+            --bg-card: #181818;
+            --bg-player: rgba(18, 18, 18, 0.95);
+            --text-main: #ffffff;
+            --text-sec: #aaaaaa;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Poppins', sans-serif;
+            padding-bottom: 140px; /* Increased space for larger custom player */
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* --- UI COMPONENTS --- */
+
+        .header-bg {
+            background: linear-gradient(180deg, rgba(20,20,20,1) 0%, rgba(15,15,15,1) 100%);
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            color: var(--primary) !important;
+            letter-spacing: -0.5px;
+        }
+
+        /* Search Bar */
+        .search-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .custom-input {
+            background: #222;
+            border: 1px solid #333;
+            color: #fff;
+            border-radius: 50px;
+            padding: 12px 20px;
+            padding-right: 100px; /* space for button */
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+        .custom-input:focus {
+            background: #2a2a2a;
+            border-color: var(--primary);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 75, 43, 0.2);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 5px;
+            top: 4px;
+            bottom: 4px;
+            border-radius: 40px;
+            background: var(--primary);
+            border: none;
+            padding: 0 20px;
+            color: white;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+        .search-btn:hover {
+            background: var(--primary-dark);
+            transform: scale(1.05);
+        }
+
+        /* Tags */
+        .tag-pill {
+            background: #222;
+            border: 1px solid #333;
+            color: #ccc;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .tag-pill:hover, .tag-pill.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Song Cards */
+        .song-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 12px;
+            height: 100%;
+            transition: transform 0.2s, background 0.2s;
+            cursor: pointer;
+            border: 1px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .song-card:hover {
+            background: #222;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .song-card.playing {
+            border-color: var(--primary);
+            background: rgba(255, 75, 43, 0.05);
+        }
+
+        .card-img-wrapper {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+        
+        .card-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s;
+        }
+        
+        .song-card:hover .card-img {
+            transform: scale(1.05);
+        }
+
+        /* Play overlay on hover */
+        .play-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .song-card:hover .play-overlay {
+            opacity: 1;
+        }
+        .play-icon {
+            font-size: 2rem;
+            color: white;
+            background: var(--primary);
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        .song-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .song-artist {
+            color: var(--text-sec);
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Playlist Circles */
+        .playlist-item {
+            display: inline-block;
+            width: 120px;
+            margin-right: 15px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .playlist-img {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 50%;
+            border: 2px solid #333;
+            padding: 3px;
+            transition: border-color 0.2s;
+            margin-bottom: 8px;
+        }
+        .playlist-item:hover .playlist-img {
+            border-color: var(--primary);
+        }
+
+        /* --- CUSTOM AUDIO PLAYER --- */
+        #custom-player {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-player);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 15px;
+            z-index: 2000;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease;
+        }
+        
+        .player-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Info Section */
+        .player-info {
+            display: flex;
+            align-items: center;
+            width: 30%;
+            min-width: 150px;
+        }
+        .player-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            margin-right: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .player-text h6 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: white;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+        .player-text p {
+            margin: 0;
+            font-size: 0.75rem;
+            color: var(--text-sec);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+
+        /* Controls Section */
+        .player-controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 40%;
+        }
+        
+        .control-buttons {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .btn-control {
+            background: none;
+            border: none;
+            color: #ddd;
+            font-size: 1.4rem;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        .btn-control:hover { color: white; }
+        .btn-control:active { transform: scale(0.9); }
+        .btn-control.active { color: var(--primary); }
+        
+        .btn-play {
+            background: white;
+            color: black;
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            font-size: 1.1rem;
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+        .btn-play:hover {
+            transform: scale(1.1);
+            color: black;
+            background: var(--primary);
+        }
+
+        /* Timeline / Slider */
+        .timeline-container {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.7rem;
+            color: #aaa;
+            font-variant-numeric: tabular-nums;
+        }
+        
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            cursor: pointer;
+            height: 10px; /* larger touch area */
+            margin: 0;
+        }
+        input[type=range]:focus { outline: none; }
+        
+        /* Webkit Slider Track */
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: #444;
+            border-radius: 2px;
+        }
+        /* Webkit Slider Thumb */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: var(--primary);
+            margin-top: -4px; /* center thumb */
+            transition: transform 0.1s;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        input[type=range]:hover::-webkit-slider-thumb {
+            transform: scale(1.2);
+        }
+        
+        /* Firefox Track/Thumb */
+        input[type=range]::-moz-range-track {
+            width: 100%;
+            height: 4px;
+            background: #444;
+            border-radius: 2px;
+        }
+        input[type=range]::-moz-range-thumb {
+            height: 12px;
+            width: 12px;
+            border: none;
+            border-radius: 50%;
+            background: var(--primary);
+        }
+
+        /* Actions Section (Right side) */
+        .player-actions {
+            width: 30%;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 768px) {
+            .player-actions { display: none; } /* hide volume/extras on mobile to save space */
+            
+            /* Rebalance width for controls */
+            .player-info { width: 55%; }
+            .player-controls { width: 45%; }
+            
+            .timeline-container { 
+                position: absolute; 
+                top: -8px; 
+                left: 0; 
+                right: 0; 
+                padding: 0 10px;
+                gap: 0;
+            }
+            .time-display { display: none; } /* hide numbers on mobile timeline overlay */
+            input[type=range]::-webkit-slider-runnable-track { height: 3px; background: rgba(255,255,255,0.2); }
+            input[type=range]::-webkit-slider-thumb { width: 0; height: 0; box-shadow: none; } /* Hide thumb */
+            
+            /* Controls Row */
+            .control-buttons { 
+                margin-bottom: 0; 
+                gap: 12px; /* Tighter gap for mobile */
+            }
+            
+            /* Ensure buttons are visible */
+            .btn-skip-back, .btn-skip-fwd { display: flex !important; font-size: 1.2rem; } 
+            
+            /* Adjust play button size */
+            .btn-play { width: 35px; height: 35px; font-size: 1rem; }
+            
+            /* Reduce Info Text size */
+            .player-thumb { width: 40px; height: 40px; }
+            .player-text h6 { max-width: 120px; font-size: 0.85rem; }
+            .player-text p { max-width: 120px; font-size: 0.7rem; }
+        }
+        
+        /* Utility */
+        .loader {
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+            color: var(--primary);
+        }
+        .scrolling-wrapper {
+            overflow-x: auto;
+            white-space: nowrap;
+            padding-bottom: 10px;
+        }
+        .scrolling-wrapper::-webkit-scrollbar { height: 4px; }
+        .scrolling-wrapper::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+
+    </style>
 </head>
 
-<body style="padding-bottom: 50px;background: rgb(0,0,0);">
-    <header class="header-dark" style="color: rgb(205,205,205);padding: 0px 0px 10px;">
-        <nav class="navbar navbar-dark navbar-expand-lg navigation-clean-search">
-            <div class="container"><a class="navbar-brand" href="#">Saavn</a><button data-toggle="collapse" class="navbar-toggler" data-target="#navcol-1"><span class="sr-only">Toggle navigation</span><span class="navbar-toggler-icon"></span></button>
-                <div class="collapse navbar-collapse" id="navcol-1">
-                    <ul class="navbar-nav">
-                        <li class="nav-item"><a class="btn btn-primary" role="button" href="https://github.com/wiz64/saavn-web-ui" target="_blank">Github</a></li>
-                    </ul>
-                </div>
+<body>
+
+    <audio id="audio-element" style="display:none;"></audio>
+
+    <header class="header-bg">
+        <nav class="navbar navbar-expand-lg navbar-dark container">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+                <i class="ph-fill ph-music-notes-simple" style="font-size: 1.5rem;"></i>
+                Saavn Telugu
+            </a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navcol-1">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navcol-1">
+                <ul class="navbar-nav ml-auto">
+                    <li class="nav-item">
+                        <a class="nav-link text-light" href="#" onclick="showLibrary()"><i class="ph ph-heart text-danger"></i> My Library</a>
+                    </li>
+                </ul>
             </div>
         </nav>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-8 offset-md-2">
-                    <h1 class="text-center" style="margin: 0px;">Saavn</h1>
-                    <h3 class="text-center" style="color: rgba(249,255,255,0.81);font-family: Bitter, serif;">Music Player &amp; Downloader</h3>
-                    <p class="text-center" style="padding: 0px 5px;">Ad-Free, Metadata, &amp; Modern Design</p>
-                </div>
+
+        <div class="container mt-3">
+            <div class="search-container">
+                <form onsubmit="event.preventDefault(); SaavnSearch();">
+                    <input class="custom-input" type="text" id="saavn-search-box" placeholder="Search songs, artists, albums...">
+                    <button class="search-btn" type="submit"><i class="ph-bold ph-magnifying-glass"></i></button>
+                </form>
             </div>
+
+            <!-- Bitrate hidden setting -->
+            <select id="saavn-bitrate" style="display:none;">
+                <option value="4">320kbps</option>
+                <option value="3" selected>160kbps</option>
+            </select>
+
+            <div class="d-flex flex-wrap justify-content-center gap-2 mt-4" id="quick-tags">
+                <!-- Tags injected by JS -->
+            </div>
+        </div>
+    </header>
+
+    <div class="container mt-4">
+        
+        <!-- Playlists -->
+        <div id="playlist-section" style="display:none;">
+            <div class="d-flex justify-content-between align-items-end mb-3">
+                <h5 class="font-weight-bold mb-0">Top Playlists</h5>
+            </div>
+            <div id="saavn-playlists" class="scrolling-wrapper">
+                <!-- Playlist Items -->
+            </div>
+        </div>
+
+        <!-- Songs -->
+        <div class="d-flex justify-content-between align-items-end mt-4 mb-3">
+            <h5 class="font-weight-bold mb-0" id="section-title">Featured Songs</h5>
         </div>
         
-    </header>
-    <div>
-        <div class="tab-content">
-            <div class="tab-pane active" role="tabpanel" id="tab-1">
-                <section class="highlight-clean" style="background: #000; color: rgb(249,249,249);padding-top: 20px;">
-                    <div class="text-center">
-                        <select id="saavn-bitrate">
-                            <option value="4">320kbps</option>
-                            <option value="3" selected="">160kbps</option>
-                            <option value="2">96kbps</option>
-                            <option value="1">48kbps</option>
-                        </select></div>
-                    <p class="text-center" style="padding: 0px 5px;"></p>
-                    <div class="container" style="padding: 0px;">
-                        <div class="intro">
-                            <form class="text-center" action="#" method="get">
-                                <div style="width: 95%;margin: auto;padding: 3px;" placeholder="Enter Song, Artist or Album name"><input class="form-control float-left fit-content" type="text" id="saavn-search-box" style="margin: 0px;color: var(--gray-dark);max-width: 100%;width: 75%;" placeholder="Enter Name, Year, Artist"><button class="btn btn-primary" id="saavn-search-trigger" type="submit" style="text-align: center;" onclick="SaavnSearch()">Search</button></div>
-                                <h5 class="text-uppercase text-center" style="color: rgb(165,255,184);">Results</h5>
-                            </form>
-                        </div>
-                            <div id="saavn-results" style="margin-bottom: 20px;">
-                                <h5>Featured</h5>
-                            </div>
-                            <div class="text-center" style="width:100%"><button id="loadmore" style="width: 100%;">Load More</button></div>
-                            <div class="button-container">
-                            </div>
-                            <script>
-                                const buttonTitles = ['2023','English Songs','Edward Maya','Zack Knight','Akcent','Arijit Singh','Enrique Iglesias','Pitbull','Imran Khan', 'DJ Snake', 'Darshan Raval', 'Jubin Nautiyal', 'Armaan Malik', 'Old Songs',"Adele","Billie Eilish","Imagine Dragons","Ed Sheeran","Neha Kakkar", "Badshah", "Atif Aslam", "Guru Randhawa", "Shreya Ghoshal", "Tony Kakkar", "Harrdy Sandhu", "Armaan Malik", "Diljit Dosanjh", "Sonu Nigam", "Vishal Dadlani", "Kanika Kapoor", "Sukhwinder Singh", "Sunidhi Chauhan", "Mika Singh", "Shaan", "Mohit Chauhan", "Pritam", "KK", "Yo Yo Honey Singh","Taylor Swift","Sia","Radioactive","Halsey","The Chainsmokers","Drake","Justin Bieber","Beyonce","The Weeknd","Rihanna","Lady Gaga","AC/DC","Michael Jackson","The Rolling Stones"];
-                                const buttonContainer = document.querySelector('.button-container');
-
-                                buttonTitles.forEach(title => {
-                                const button = document.createElement('button');
-                                button.classList.add('search-toggle');
-                                button.textContent = title;
-                                button.setAttribute('onclick', `doSaavnSearch('${title}')`);
-                                buttonContainer.appendChild(button);
-                                });
-                            </script>
-                   
-                        <p class="footer" align="center">
-                            This content is not affiliated with, endorsed, sponsored, or specifically approved by any third party music provider like Gaana, Saavn, Spotfy, and is not responsible for any copyright material.<br>
-                            We don't serve any music on our servers.<br><br>
-                            Originally by wiz64.<br>
-                            Re-Designed by gaganmalvi
-                        </p>
-                        <div style="padding-bottom: 40px;">
-
-                        </div>
-                    </div>
-                </section>
-            </div>
+        <div id="saavn-results" class="row">
+            <!-- Song Cards injected here -->
+        </div>
+        
+        <div class="text-center mt-4 mb-5">
+            <button id="loadmore" class="btn btn-outline-light rounded-pill px-4" style="display:none;">Load More</button>
         </div>
     </div>
-    <div id="audio-player" style="z-index: 99;background: #ffffff33; width: 100%;margin: 0px;color: var(--light);backdrop-filter: blur(4px);border-top-left-radius: 10px;border-top-right-radius: 20px;">
-        <div class="row" style="margin: 0px;">
-            <div class="col-auto fit-content" style="padding: 0px;">
-                <img class="img-fluid d-inline" id="player-image" style="height: 75px;width: 75px;border-radius: 10px;" src="https://i.pinimg.com/originals/ed/54/d2/ed54d2fa700d36d4f2671e1be84651df.jpg" loading="lazy">
-            </div>
-            <div class="col fit-content" style="padding: 0px;">
-                <div style="max-height: 24px;max-width: 95%;word-wrap: normal; padding-left: 20px;"><span id="player-name">Song</span><span><br></span><span id="player-album">Album</span></div><br>
-                <audio id="player" controls="controls" controlsList="nodownload" style="width: 100%;height: 30px; padding-left: 20px; padding-top:5px;">
-                    <source id="audioSource" src=""></source>
-                    Your browser does not support the audio format.
-                </audio>
-            </div>
-        </div>
-    </div>
-    <!-- floating downloader popup -->
-    <div class=”float-button” style="width:30px; height:30px; border-radius:50%; background-color:#fff; box-shadow: 0 0 10px #000; cursor:pointer; position:fixed;top:50px; right:20px; z-index:9999;">
-    <!-- download icon -->
-    <a href="javascript:void(0);" class="btn btn-primary" id="mpopupLink">
-    <img src="https://img.icons8.com/ios/50/000000/download.png">
-    </a></div>
-    <style>
-                                
-        #saavn-results{
-        display: flex;
-        flex-wrap: wrap;
-        }
-        /* Three columns on desktop */
-        @media screen and (min-width: 992px) {
-        .song-container {
-            width: calc(33.33% - 20px);
-            margin: 0 10px 20px 10px;
-        }
-        }
 
-        /* Two columns on desktop */
-        @media screen and (min-width: 768px) and (max-width: 991px) {
-        .song-container {
-            width: calc(50% - 20px);
-            margin: 0 10px 20px 10px;
-        }
-        }
-
-        /* One column on mobile */
-        @media screen and (max-width: 767px) {
-        .song-container {
-            width: calc(100% - 20px);
-            margin: 0 10px 20px 10px;
-        }
-        }
-        .search-toggle-container {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 10px;
-        width: 95%;
-        margin: 0 auto;
-        }
-        .search-toggle {
-        background: rgba(0, 0, 0, 0.1);
-        color: #fff;
-        font-size: 18px;
-        font-family: Aclonica, sans-serif;
-        padding: 6px;
-        border-style: none;
-        }
-        .search-toggle:nth-child(10n+1){color:#ceea82}.search-toggle:nth-child(10n+2){color:#70cee2}.search-toggle:nth-child(10n+3){color:#ef2b2d}.search-toggle:nth-child(10n+4){color:#23b805}.search-toggle:nth-child(10n+5){color:var(--primary)}.search-toggle:nth-child(10n+6){color:#cee007}.search-toggle:nth-child(10n+7){color:#ff77a8}.search-toggle:nth-child(10n+8){color:#21a9af}.search-toggle:nth-child(10n+9){color:var(--warning)}.search-toggle:nth-child(10n+10){color:#e316e7}
-    </style>
-    <style>
-        .mpopup {
-            position: fixed;
-            overflow: auto;
-            overflow-x: hidden;
-            top: 20px;
-            left: 20px;
-            right: 20px;
-            bottom: 20px;
-            width: auto;
-            height: auto;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            display: none;
-        }
-        ul.nobullets {
-  list-style-type: none; /* Remove bullets */
-  padding: 0; /* Remove padding */
-  margin: 0; /* Remove margins */
-}
-    </style>
-    <!-- Modal popup box -->
-<div id="mpopupBox" class="mpopup">
-    <!-- Modal content -->
-    <div class="modal-content">
-    
-        <div class="modal-header" style="display:inline;">
-            <span class="close">×</span>
-            <h2>Downloads</h2>
+    <!-- CUSTOM PLAYER UI -->
+    <div id="custom-player">
+        <!-- Progress Bar (Mobile: Top overlay, Desktop: inside controls) -->
+        <div class="timeline-container d-md-none mb-2">
+            <input type="range" id="mobile-seek-slider" min="0" max="100" value="0">
         </div>
-        <div class="modal-body">
-            <!-- list of songs, with a small cover art pic, name, album name -->
-            <row>
-            <ul id="download-list" class="nobullets">
-                    <!--<li>
-                    <div class="col">
-                        
-                        <img id="download-cover" src="https://i.pinimg.com/originals/ed/54/d2/ed54d2fa700d36d4f2671e1be84651df.jpg" width="50px">
-                        <div style="display: inline;">
-                        <span id="download-name">Song</span>
-                        <span id="download-album">Album</span>
-                        <br>
-                        <span id="download-size">Size</span>
-                        <span id="download-status" style="color:green">Compiling.</span>
-                        </div>
-                    </div>
-                    <hr>
-                    </li>-->
+
+        <div class="player-content">
+            <!-- 1. Song Info -->
+            <div class="player-info">
+                <img id="player-img" src="https://via.placeholder.com/60" class="player-thumb">
+                <div class="player-text">
+                    <h6 id="player-title">Select Song</h6>
+                    <p id="player-artist">Artist</p>
+                </div>
+                <!-- Mobile Like Button -->
+                 <button class="btn-control ml-3 d-md-none" id="mobile-like-btn" onclick="toggleLikeCurrent()">
+                    <i class="ph ph-heart"></i>
+                 </button>
+            </div>
+
+            <!-- 2. Controls (Center) -->
+            <div class="player-controls">
+                <div class="control-buttons">
+                    <!-- Repeat Button (Enabled on Mobile) -->
+                    <button class="btn-control" id="btn-repeat" onclick="toggleRepeat()" title="Repeat">
+                        <i class="ph ph-repeat"></i>
+                    </button>
                     
+                    <!-- Prev Button -->
+                    <button class="btn-control btn-skip-back" onclick="playPreviousSong()">
+                        <i class="ph-fill ph-skip-back"></i>
+                    </button>
+                    
+                    <!-- Play Button -->
+                    <button class="btn-control btn-play" id="btn-play-pause" onclick="togglePlay()">
+                        <i class="ph-fill ph-play" id="icon-play-pause"></i>
+                    </button>
+                    
+                    <!-- Next Button -->
+                    <button class="btn-control btn-skip-fwd" onclick="playNextSong()">
+                        <i class="ph-fill ph-skip-forward"></i>
+                    </button>
 
+                    <!-- Shuffle Button (Hidden on Mobile) -->
+                    <button class="btn-control d-none d-md-block" title="Shuffle">
+                        <i class="ph ph-shuffle"></i>
+                    </button>
+                </div>
 
-                
-                </ul></row>
+                <!-- Desktop Timeline -->
+                <div class="timeline-container d-none d-md-flex">
+                    <span class="time-display" id="curr-time">0:00</span>
+                    <input type="range" id="seek-slider" min="0" max="100" value="0">
+                    <span class="time-display" id="total-duration">0:00</span>
+                </div>
+            </div>
+
+            <!-- 3. Actions (Right) -->
+            <div class="player-actions">
+                <button class="btn-control" id="desktop-like-btn" onclick="toggleLikeCurrent()">
+                    <i class="ph ph-heart"></i>
+                </button>
+                <button class="btn-control">
+                    <i class="ph ph-speaker-high"></i>
+                </button>
+            </div>
         </div>
-        <div class="modal-footer" style="text-align: center;">
-            <p>Don't flood the Media Server, Have patience...</p>
-        </div>
-    
     </div>
-</div>
-<script>
-    // Select modal
-    var mpopup = document.getElementById('mpopupBox');
-    
-    // Select trigger link
-    var mpLink = document.getElementById("mpopupLink");
-    
-    // Select close action element
-    var close = document.getElementsByClassName("close")[0];
-    
-    // Open modal once the link is clicked
-    mpLink.onclick = function() {
-        mpopup.style.display = "block";
-    };
-    
-    // Close modal once close element is clicked
-    close.onclick = function() {
-        mpopup.style.display = "none";
-    };
-    
-    // Close modal when user clicks outside of the modal box
-    window.onclick = function(event) {
-        if (event.target == mpopup) {
-            mpopup.style.display = "none";
-        }
-    };
-    </script>
-    
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.1/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/functions.js?v=1"></script>
-    <script src="assets/js/saavn-search.js?v=1"></script>
-</body>
 
+    <!-- SCRIPTS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.1/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        /* --- CONFIG --- */
+        const API_BASE = "https://jiosaavn-api-privatecvc2.vercel.app";
+        
+        // State
+        let queue = [];
+        let queueIndex = -1;
+        let songsCache = {}; // id -> song object
+        let likedSongs = JSON.parse(localStorage.getItem('saavn_liked')) || {};
+        
+        // Player State
+        let isPlaying = false;
+        let repeatMode = 0; // 0 = None, 1 = One, 2 = All
+        let currentSongId = null;
+
+        // Elements
+        const audio = document.getElementById('audio-element');
+        const seekSlider = document.getElementById('seek-slider');
+        const mobileSeekSlider = document.getElementById('mobile-seek-slider');
+        const playBtnIcon = document.getElementById('icon-play-pause');
+        const repeatBtn = document.getElementById('btn-repeat');
+
+        /* --- INIT --- */
+        $(document).ready(() => {
+            // Tags
+            const tags = ['Telugu Trending','Sid Sriram','Thaman S','DSP','Anirudh','Love Songs','Mass Beats','Folk'];
+            const tagContainer = document.getElementById('quick-tags');
+            tags.forEach(t => {
+                const b = document.createElement('div');
+                b.className = 'tag-pill';
+                b.innerText = t;
+                b.onclick = () => doSearch(t);
+                tagContainer.appendChild(b);
+            });
+
+            // Initial Search
+            doSearch('Telugu Trending');
+
+            // Audio Listeners
+            audio.addEventListener('timeupdate', updateProgress);
+            audio.addEventListener('ended', handleEnded);
+            audio.addEventListener('play', () => updatePlayState(true));
+            audio.addEventListener('pause', () => updatePlayState(false));
+            audio.addEventListener('loadedmetadata', () => {
+                document.getElementById('total-duration').innerText = formatTime(audio.duration);
+            });
+
+            // Slider Listeners
+            [seekSlider, mobileSeekSlider].forEach(slider => {
+                slider.addEventListener('input', (e) => {
+                    const time = (audio.duration / 100) * e.target.value;
+                    audio.currentTime = time;
+                });
+            });
+
+            // Load More
+            $('#loadmore').click(() => {
+                // Simplified for this demo: just increment page logic inside doSearch if implemented full pagination
+                // Here we just re-trigger for demo purposes or notify
+                alert("Pagination would load next page here.");
+            });
+        });
+
+        /* --- SEARCH --- */
+        async function doSearch(query) {
+            // UI Reset
+            $('#section-title').text(`Results: ${query}`);
+            $('#saavn-results').html('<div class="loader"><i class="ph ph-spinner ph-spin" style="font-size:2rem;"></i></div>');
+            $('#playlist-section').hide();
+            $('#loadmore').hide();
+            
+            // 1. Playlists (First page only)
+            searchPlaylists(query);
+
+            // 2. Songs
+            try {
+                const res = await fetch(`${API_BASE}/search/songs?query=${encodeURIComponent(query)}&page=1&limit=24`);
+                const data = await res.json();
+                
+                if(data.data && data.data.results) {
+                    $('#saavn-results').empty();
+                    queue = []; // New search, new queue
+                    renderSongs(data.data.results);
+                    if(data.data.results.length > 0) $('#loadmore').show();
+                } else {
+                    $('#saavn-results').html('<div class="w-100 text-center text-muted">No songs found.</div>');
+                }
+            } catch(e) {
+                console.error(e);
+                $('#saavn-results').html('<div class="w-100 text-center text-muted">Error fetching data.</div>');
+            }
+        }
+
+        async function searchPlaylists(query) {
+            try {
+                const res = await fetch(`${API_BASE}/search/playlists?query=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if(data.data && data.data.results && data.data.results.length > 0) {
+                    $('#playlist-section').show();
+                    const container = document.getElementById('saavn-playlists');
+                    container.innerHTML = '';
+                    data.data.results.forEach(pl => {
+                        const img = pl.image?.[2]?.link || pl.image?.[0]?.link || '';
+                        const d = document.createElement('div');
+                        d.className = 'playlist-item';
+                        d.innerHTML = `<img src="${img}" class="playlist-img"><div style="font-size:0.8rem; overflow:hidden; text-overflow:ellipsis;">${pl.title}</div>`;
+                        d.onclick = () => loadPlaylist(pl.id);
+                        container.appendChild(d);
+                    });
+                }
+            } catch(e) {}
+        }
+
+        async function loadPlaylist(id) {
+            $('#saavn-results').html('<div class="loader"><i class="ph ph-spinner ph-spin" style="font-size:2rem;"></i></div>');
+            $('#playlist-section').hide();
+            try {
+                const res = await fetch(`${API_BASE}/playlists?id=${id}`);
+                const data = await res.json();
+                if(data.data && data.data.songs) {
+                    $('#section-title').text(data.data.name);
+                    $('#saavn-results').empty();
+                    queue = [];
+                    renderSongs(data.data.songs);
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function renderSongs(songs) {
+            const container = document.getElementById('saavn-results');
+            songs.forEach(song => {
+                // Cache
+                songsCache[song.id] = song;
+                if(!queue.includes(song.id)) queue.push(song.id);
+
+                // Data
+                const img = song.image?.[2]?.link || song.image?.[0]?.link;
+                const name = song.name.replaceAll('&quot;', '"').replaceAll('&#039;', "'").replaceAll('&amp;', '&');
+                const artist = song.primaryArtists || song.singers || song.album.name;
+
+                // Card HTML
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-4 col-lg-3 col-xl-2 mb-4';
+                col.innerHTML = `
+                    <div class="song-card" id="card-${song.id}" onclick="playSong('${song.id}')">
+                        <div class="card-img-wrapper">
+                            <img src="${img}" class="card-img" loading="lazy">
+                            <div class="play-overlay">
+                                <div class="play-icon"><i class="ph-fill ph-play"></i></div>
+                            </div>
+                        </div>
+                        <div class="song-title" title="${name}">${name}</div>
+                        <div class="song-artist" title="${artist}">${artist}</div>
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+        }
+
+        /* --- PLAYER LOGIC --- */
+
+        function playSong(id) {
+            const song = songsCache[id];
+            if(!song) return;
+
+            currentSongId = id;
+            queueIndex = queue.indexOf(id);
+
+            // Update UI Cards
+            $('.song-card').removeClass('playing');
+            $(`#card-${id}`).addClass('playing');
+
+            // Update Player Bar Info
+            const name = song.name.replaceAll('&quot;', '"').replaceAll('&#039;', "'").replaceAll('&amp;', '&');
+            const img = song.image?.[2]?.link || song.image?.[0]?.link;
+            
+            document.getElementById('player-title').innerText = name;
+            document.getElementById('player-artist').innerText = song.primaryArtists || song.album.name || "";
+            document.getElementById('player-img').src = img;
+            
+            // Like Button State
+            updateLikeBtnState(id);
+
+            // Stream URL
+            let url = "";
+            try {
+                // Try 320kbps (index 4) or 160 (index 2) fallback last
+                if(song.downloadUrl) {
+                    url = song.downloadUrl[4]?.link || song.downloadUrl[song.downloadUrl.length-1]?.link;
+                }
+            } catch(e) {}
+            
+            if(url) {
+                audio.src = url;
+                audio.play().catch(e => console.log("Autoplay blocked", e));
+            } else {
+                console.error("No URL found");
+            }
+        }
+
+        function togglePlay() {
+            if(audio.paused && audio.src) audio.play();
+            else audio.pause();
+        }
+
+        function updatePlayState(playing) {
+            isPlaying = playing;
+            if(playing) {
+                playBtnIcon.classList.remove('ph-play');
+                playBtnIcon.classList.add('ph-pause');
+            } else {
+                playBtnIcon.classList.remove('ph-pause');
+                playBtnIcon.classList.add('ph-play');
+            }
+        }
+
+        function playNextSong() {
+            if(queue.length === 0) return;
+            let next = queueIndex + 1;
+            if(next >= queue.length) next = 0; // Loop list
+            playSong(queue[next]);
+        }
+
+        function playPreviousSong() {
+            if(queue.length === 0) return;
+            let prev = queueIndex - 1;
+            if(prev < 0) prev = queue.length - 1;
+            playSong(queue[prev]);
+        }
+
+        function handleEnded() {
+            if(repeatMode === 1) {
+                // Repeat One
+                audio.currentTime = 0;
+                audio.play();
+            } else {
+                // Repeat All / None (For now just loop queue)
+                playNextSong();
+            }
+        }
+
+        /* --- TIMELINE --- */
+        function updateProgress() {
+            const curr = audio.currentTime;
+            const dur = audio.duration || 1; // avoid /0
+            
+            // Format time
+            document.getElementById('curr-time').innerText = formatTime(curr);
+            
+            // Update sliders
+            const pct = (curr / dur) * 100;
+            seekSlider.value = pct;
+            mobileSeekSlider.value = pct;
+            
+            // Visual progress fill for webkit sliders (optional advanced css, keeping simple for now)
+            seekSlider.style.background = `linear-gradient(to right, var(--primary) ${pct}%, #444 ${pct}%)`;
+        }
+
+        function formatTime(s) {
+            if(isNaN(s)) return "0:00";
+            const min = Math.floor(s / 60);
+            const sec = Math.floor(s % 60);
+            return `${min}:${sec < 10 ? '0'+sec : sec}`;
+        }
+
+        /* --- EXTRAS --- */
+        function toggleRepeat() {
+            repeatMode++;
+            if(repeatMode > 2) repeatMode = 0;
+            
+            const icon = repeatBtn.querySelector('i');
+            repeatBtn.classList.remove('active');
+            
+            if(repeatMode === 0) {
+                // Off
+                icon.className = 'ph ph-repeat';
+                icon.style.color = '#ddd';
+            } else if (repeatMode === 1) {
+                // One
+                icon.className = 'ph-fill ph-repeat-once';
+                icon.style.color = 'var(--primary)';
+            } else {
+                // All
+                icon.className = 'ph-fill ph-repeat';
+                icon.style.color = 'var(--primary)';
+            }
+        }
+
+        function toggleLikeCurrent() {
+            if(!currentSongId) return;
+            const id = currentSongId;
+            const song = songsCache[id];
+            
+            if(likedSongs[id]) {
+                delete likedSongs[id];
+            } else {
+                likedSongs[id] = song;
+            }
+            localStorage.setItem('saavn_liked', JSON.stringify(likedSongs));
+            updateLikeBtnState(id);
+        }
+
+        function updateLikeBtnState(id) {
+            const isLiked = !!likedSongs[id];
+            // Desktop
+            const dBtn = document.getElementById('desktop-like-btn').querySelector('i');
+            dBtn.className = isLiked ? 'ph-fill ph-heart text-danger' : 'ph ph-heart';
+            // Mobile
+            const mBtn = document.getElementById('mobile-like-btn').querySelector('i');
+            mBtn.className = isLiked ? 'ph-fill ph-heart text-danger' : 'ph ph-heart';
+        }
+
+        function showLibrary() {
+            $('#section-title').text('My Library');
+            $('#saavn-results').empty();
+            $('#playlist-section').hide();
+            $('#loadmore').hide();
+            
+            const ids = Object.keys(likedSongs);
+            if(ids.length === 0) {
+                $('#saavn-results').html('<div class="w-100 text-center text-muted">Library empty.</div>');
+                return;
+            }
+            
+            queue = ids;
+            ids.forEach(id => songsCache[id] = likedSongs[id]);
+            renderSongs(ids.map(id => likedSongs[id]));
+        }
+
+    </script>
+</body>
 </html>
