@@ -1,17 +1,13 @@
-// --- FULL REPLACEMENT FOR assets/js/functions.js ---
-
 var DOWNLOAD_API = "https://openmp3compiler.astudy.org";
-let playHistory = JSON.parse(localStorage.getItem('saavn_history')) || {};
 
 function PlayAudio(audio_url, song_id) {
     const audio = document.getElementById('player');
     const source = document.getElementById('audioSource');
     
-    // 1. Update Source and Load
     source.src = audio_url;
     audio.load();
 
-    // 2. Update UI
+    // Update the UI with name, album, and image
     try {
         const name = document.getElementById(song_id + "-n").textContent;
         const album = document.getElementById(song_id + "-a").textContent;
@@ -22,16 +18,14 @@ function PlayAudio(audio_url, song_id) {
         document.getElementById("player-album").innerHTML = album;
         document.getElementById("player-image").setAttribute("src", image);
     } catch (e) {
-        console.log("UI elements not found, likely an auto-played song.");
+        console.log("Auto-playing: UI update handled by virtual elements.");
     }
 
-    // 3. Play
     audio.play();
 
-    // 4. THE AUTO-NEXT TRIGGER (Removing old listeners first to prevent double-play)
-    audio.onended = null; 
+    // THIS IS THE TRIGGER: When song ends, call the next one
     audio.onended = function() {
-        console.log("Song finished. Finding next song...");
+        console.log("SUCCESS: Song ended. Searching for next recommendation...");
         playNextRecommendation(song_id);
     };
 }
@@ -47,10 +41,7 @@ async function playNextRecommendation(currentSongId) {
             const bitrateVal = document.getElementById('saavn-bitrate').value;
             const nextUrl = nextTrack.downloadUrl[bitrateVal]?.link || nextTrack.downloadUrl[3].link;
             
-            // Register data globally so PlayAudio can see it
-            results_objects[nextTrack.id] = { track: nextTrack };
-            
-            // Create temporary hidden elements so the UI update doesn't crash
+            // Create virtual elements so PlayAudio doesn't crash
             const tempDiv = document.createElement('div');
             tempDiv.style.display = 'none';
             tempDiv.innerHTML = `
@@ -60,6 +51,7 @@ async function playNextRecommendation(currentSongId) {
             `;
             document.body.appendChild(tempDiv);
 
+            console.log("Now playing next recommendation: " + nextTrack.name);
             PlayAudio(nextUrl, nextTrack.id);
         }
     } catch (err) {
@@ -67,21 +59,14 @@ async function playNextRecommendation(currentSongId) {
     }
 }
 
-// Keep your existing helper functions below
+// Download and Search helper functions
 function searchSong(search_term) {
     document.getElementById('saavn-search-box').value = search_term;
     document.getElementById("saavn-search-trigger").click();
 }
 
 function AddDownload(id) {
-    fetch(DOWNLOAD_API + "/add?id=" + id)
-    .then(res => res.json())
-    .then(data => {
-        if (data.status == "success") {
-            const list = document.getElementById("download-list");
-            const item = document.createElement("li");
-            item.innerHTML = `<div class="col"><span class="track-name">${id}</span> - <span class="track-status" style="color:green">Processing...</span></div><hr>`;
-            list.appendChild(item);
-        }
+    fetch(DOWNLOAD_API + "/add?id=" + id).then(res => res.json()).then(data => {
+        if (data.status == "success") { alert("Added to download list!"); }
     });
 }
