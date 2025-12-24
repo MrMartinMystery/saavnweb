@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-Enhanced Version 2.1
-Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern UI
+Enhanced Version 2.3
+Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timeline, Modern UI
 -->
 <head>
     <meta charset="utf-8">
@@ -617,6 +617,9 @@ Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern
 
         /* --- INIT --- */
         $(document).ready(() => {
+            // Restore State if available
+            restorePlayerState();
+
             // Tags
             const tags = ['Telugu Trending','Sid Sriram','Thaman S','DSP','Anirudh','Love Songs','Mass Beats','Folk'];
             const tagContainer = document.getElementById('quick-tags');
@@ -628,8 +631,10 @@ Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern
                 tagContainer.appendChild(b);
             });
 
-            // Initial Search
-            doSearch('Telugu Trending');
+            // If no previous state, do initial search
+            if(queue.length === 0) {
+                doSearch('Telugu Trending');
+            }
 
             // Audio Listeners
             audio.addEventListener('timeupdate', updateProgress);
@@ -648,15 +653,91 @@ Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern
                 });
             });
 
-            // Load More
-            $('#loadmore').click(() => {
-                // Simplified for this demo: just increment page logic inside doSearch if implemented full pagination
-                // Here we just re-trigger for demo purposes or notify
-                alert("Pagination would load next page here.");
-            });
+            // Save state on unload
+            window.addEventListener('beforeunload', savePlayerState);
         });
 
+        /* --- STATE MANAGEMENT --- */
+        function savePlayerState() {
+            const state = {
+                queue,
+                queueIndex,
+                currentSongId,
+                currentTime: audio.currentTime,
+                isPlaying: !audio.paused,
+                // We only save cache for songs in the queue to save space, but for simplicity saving all current cache
+                // Real app should prune this
+                songsCache 
+            };
+            localStorage.setItem('saavn_player_state_v2', JSON.stringify(state));
+        }
+
+        function restorePlayerState() {
+            const raw = localStorage.getItem('saavn_player_state_v2');
+            if(!raw) return;
+            
+            try {
+                const state = JSON.parse(raw);
+                queue = state.queue || [];
+                queueIndex = state.queueIndex || -1;
+                songsCache = state.songsCache || {};
+                currentSongId = state.currentSongId;
+                
+                // If we have a song pending
+                if(currentSongId && songsCache[currentSongId]) {
+                    // 1. Update UI immediately
+                    updatePlayerUI(currentSongId);
+                    updateLikeBtnState(currentSongId);
+                    
+                    // 2. Load Audio Source
+                    const song = songsCache[currentSongId];
+                    const url = getSongUrl(song);
+                    if(url) {
+                        audio.src = url;
+                        // 3. Set Time
+                        audio.currentTime = state.currentTime || 0;
+                        
+                        // 4. Render the list of current queue if it was a search result (Approximation)
+                        // If queue is from a search, we might want to re-render.
+                        // For now, we will render the cached songs in queue
+                        if(queue.length > 0) {
+                           // Re-render queue items
+                           const container = document.getElementById('saavn-results');
+                           container.innerHTML = '';
+                           queue.forEach(id => {
+                               if(songsCache[id]) renderSongCard(songsCache[id], container);
+                           });
+                           $('#section-title').text('Resumed Queue');
+                           // Update playing class
+                           $(`#card-${currentSongId}`).addClass('playing');
+                        }
+
+                        // 5. Attempt Auto-Resume
+                        if(state.isPlaying) {
+                            const p = audio.play();
+                            if(p !== undefined) {
+                                p.catch(e => {
+                                    console.log("Auto-resume blocked by browser policy. User must click play.");
+                                    updatePlayState(false);
+                                });
+                            }
+                        } else {
+                            // Ensure UI shows pause state
+                            updatePlayState(false);
+                        }
+                    }
+                }
+            } catch(e) {
+                console.error("Failed to restore state", e);
+            }
+        }
+
         /* --- SEARCH --- */
+        function SaavnSearch() {
+            const query = document.getElementById('saavn-search-box').value.trim();
+            if(query) doSearch(query);
+        }
+
         async function doSearch(query) {
             // UI Reset
             $('#section-title').text(`Results: ${query}`);
@@ -675,7 +756,15 @@ Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern
                 if(data.data && data.data.results) {
                     $('#saavn-results').empty();
                     queue = []; // New search, new queue
-                    renderSongs(data.data.results);
+                    queueIndex = -1;
+                    
+                    const container = document.getElementById('saavn-results');
+                    data.data.results.forEach(song => {
+                        songsCache[song.id] = song;
+                        queue.push(song.id);
+                        renderSongCard(song, container);
+                    });
+                    
                     if(data.data.results.length > 0) $('#loadmore').show();
                 } else {
                     $('#saavn-results').html('<div class="w-100 text-center text-muted">No songs found.</div>');
@@ -716,56 +805,51 @@ Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern
                     $('#section-title').text(data.data.name);
                     $('#saavn-results').empty();
                     queue = [];
-                    renderSongs(data.data.songs);
+                    queueIndex = -1;
+                    const container = document.getElementById('saavn-results');
+                    data.data.songs.forEach(song => {
+                        songsCache[song.id] = song;
+                        queue.push(song.id);
+                        renderSongCard(song, container);
+                    });
                 }
             } catch(e) { console.error(e); }
         }
 
-        function renderSongs(songs) {
-            const container = document.getElementById('saavn-results');
-            songs.forEach(song => {
-                // Cache
-                songsCache[song.id] = song;
-                if(!queue.includes(song.id)) queue.push(song.id);
+        function renderSongCard(song, container) {
+            const img = song.image?.[2]?.link || song.image?.[0]?.link;
+            const name = song.name.replaceAll('&quot;', '"').replaceAll('&#039;', "'").replaceAll('&amp;', '&');
+            const artist = song.primaryArtists || song.singers || song.album.name || "Unknown";
 
-                // Data
-                const img = song.image?.[2]?.link || song.image?.[0]?.link;
-                const name = song.name.replaceAll('&quot;', '"').replaceAll('&#039;', "'").replaceAll('&amp;', '&');
-                const artist = song.primaryArtists || song.singers || song.album.name;
-
-                // Card HTML
-                const col = document.createElement('div');
-                col.className = 'col-6 col-md-4 col-lg-3 col-xl-2 mb-4';
-                col.innerHTML = `
-                    <div class="song-card" id="card-${song.id}" onclick="playSong('${song.id}')">
-                        <div class="card-img-wrapper">
-                            <img src="${img}" class="card-img" loading="lazy">
-                            <div class="play-overlay">
-                                <div class="play-icon"><i class="ph-fill ph-play"></i></div>
-                            </div>
+            const col = document.createElement('div');
+            col.className = 'col-6 col-md-4 col-lg-3 col-xl-2 mb-4';
+            col.innerHTML = `
+                <div class="song-card ${currentSongId === song.id ? 'playing' : ''}" id="card-${song.id}" onclick="playSong('${song.id}')">
+                    <div class="card-img-wrapper">
+                        <img src="${img}" class="card-img" loading="lazy">
+                        <div class="play-overlay">
+                            <div class="play-icon"><i class="ph-fill ph-play"></i></div>
                         </div>
-                        <div class="song-title" title="${name}">${name}</div>
-                        <div class="song-artist" title="${artist}">${artist}</div>
                     </div>
-                `;
-                container.appendChild(col);
-            });
+                    <div class="song-title" title="${name}">${name}</div>
+                    <div class="song-artist" title="${artist}">${artist}</div>
+                </div>
+            `;
+            container.appendChild(col);
         }
 
         /* --- PLAYER LOGIC --- */
 
-        function playSong(id) {
+        function getSongUrl(song) {
+             try {
+                return song.downloadUrl?.[4]?.link || song.downloadUrl?.[song.downloadUrl.length-1]?.link;
+            } catch(e) { return ""; }
+        }
+
+        function updatePlayerUI(id) {
             const song = songsCache[id];
             if(!song) return;
 
-            currentSongId = id;
-            queueIndex = queue.indexOf(id);
-
-            // Update UI Cards
-            $('.song-card').removeClass('playing');
-            $(`#card-${id}`).addClass('playing');
-
-            // Update Player Bar Info
             const name = song.name.replaceAll('&quot;', '"').replaceAll('&#039;', "'").replaceAll('&amp;', '&');
             const img = song.image?.[2]?.link || song.image?.[0]?.link;
             
@@ -773,21 +857,34 @@ Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern
             document.getElementById('player-artist').innerText = song.primaryArtists || song.album.name || "";
             document.getElementById('player-img').src = img;
             
-            // Like Button State
+            // Highlight Card
+            $('.song-card').removeClass('playing');
+            $(`#card-${id}`).addClass('playing');
+        }
+
+        function playSong(id) {
+            const song = songsCache[id];
+            if(!song) return;
+
+            // If clicking the same song, just toggle play
+            if(currentSongId === id && audio.src) {
+                togglePlay();
+                return;
+            }
+
+            currentSongId = id;
+            queueIndex = queue.indexOf(id);
+
+            // Update UI
+            updatePlayerUI(id);
             updateLikeBtnState(id);
 
-            // Stream URL
-            let url = "";
-            try {
-                // Try 320kbps (index 4) or 160 (index 2) fallback last
-                if(song.downloadUrl) {
-                    url = song.downloadUrl[4]?.link || song.downloadUrl[song.downloadUrl.length-1]?.link;
-                }
-            } catch(e) {}
-            
+            // Play Audio
+            const url = getSongUrl(song);
             if(url) {
                 audio.src = url;
                 audio.play().catch(e => console.log("Autoplay blocked", e));
+                savePlayerState(); // Save state immediately on new song
             } else {
                 console.error("No URL found");
             }
@@ -847,7 +944,7 @@ Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern
             seekSlider.value = pct;
             mobileSeekSlider.value = pct;
             
-            // Visual progress fill for webkit sliders (optional advanced css, keeping simple for now)
+            // Visual progress fill
             seekSlider.style.background = `linear-gradient(to right, var(--primary) ${pct}%, #444 ${pct}%)`;
         }
 
@@ -918,8 +1015,12 @@ Features: Mobile Controls Enabled (Skip/Prev/Repeat), Draggable Timeline, Modern
             }
             
             queue = ids;
-            ids.forEach(id => songsCache[id] = likedSongs[id]);
-            renderSongs(ids.map(id => likedSongs[id]));
+            queueIndex = -1;
+            const container = document.getElementById('saavn-results');
+            ids.forEach(id => {
+                songsCache[id] = likedSongs[id];
+                renderSongCard(likedSongs[id], container);
+            });
         }
 
     </script>
