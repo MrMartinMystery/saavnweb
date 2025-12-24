@@ -1,3 +1,4 @@
+// --- FULL REPLACEMENT FOR functions.js ---
 var DOWNLOAD_API = "https://openmp3compiler.astudy.org";
 
 function PlayAudio(audio_url, song_id) {
@@ -7,7 +8,7 @@ function PlayAudio(audio_url, song_id) {
     source.src = audio_url;
     audio.load();
 
-    // Update the UI with name, album, and image
+    // Update UI based on search results 
     try {
         const name = document.getElementById(song_id + "-n").textContent;
         const album = document.getElementById(song_id + "-a").textContent;
@@ -18,30 +19,37 @@ function PlayAudio(audio_url, song_id) {
         document.getElementById("player-album").innerHTML = album;
         document.getElementById("player-image").setAttribute("src", image);
     } catch (e) {
-        console.log("Auto-playing: UI update handled by virtual elements.");
+        console.log("Auto-play: UI updated via virtual data.");
     }
 
-    audio.play();
+    audio.play().catch(err => console.error("Playback failed:", err));
 
-    // THIS IS THE TRIGGER: When song ends, call the next one
+    // CLEANUP AND SET AUTO-PLAY
+    // We remove old listeners to prevent the app from skipping multiple songs at once
+    audio.onended = null; 
     audio.onended = function() {
-        console.log("SUCCESS: Song ended. Searching for next recommendation...");
+        console.log("Song finished. Triggering next choice...");
         playNextRecommendation(song_id);
     };
 }
 
 async function playNextRecommendation(currentSongId) {
+    // API endpoint for song suggestions based on current song 
     const recUrl = `https://jiosaavn-api-privatecvc2.vercel.app/songs/${currentSongId}/suggestions`;
     try {
         const response = await fetch(recUrl);
         const resJson = await response.json();
         
         if (resJson.data && resJson.data.length > 0) {
+            // Take the first recommendation 
             const nextTrack = resJson.data[0];
             const bitrateVal = document.getElementById('saavn-bitrate').value;
             const nextUrl = nextTrack.downloadUrl[bitrateVal]?.link || nextTrack.downloadUrl[3].link;
             
-            // Create virtual elements so PlayAudio doesn't crash
+            // Map data globally so PlayAudio works 
+            results_objects[nextTrack.id] = { track: nextTrack };
+            
+            // Create virtual HTML elements so UI doesn't break when looking for IDs 
             const tempDiv = document.createElement('div');
             tempDiv.style.display = 'none';
             tempDiv.innerHTML = `
@@ -51,15 +59,14 @@ async function playNextRecommendation(currentSongId) {
             `;
             document.body.appendChild(tempDiv);
 
-            console.log("Now playing next recommendation: " + nextTrack.name);
             PlayAudio(nextUrl, nextTrack.id);
         }
     } catch (err) {
-        console.error("Auto-play error:", err);
+        console.error("Auto-play suggestion error:", err);
     }
 }
 
-// Download and Search helper functions
+// Keep core helpers
 function searchSong(search_term) {
     document.getElementById('saavn-search-box').value = search_term;
     document.getElementById("saavn-search-trigger").click();
@@ -67,6 +74,6 @@ function searchSong(search_term) {
 
 function AddDownload(id) {
     fetch(DOWNLOAD_API + "/add?id=" + id).then(res => res.json()).then(data => {
-        if (data.status == "success") { alert("Added to download list!"); }
+        if (data.status == "success") { alert("Added to Downloads!"); }
     });
 }
