@@ -1,3 +1,51 @@
+// New: Global history tracker (Lines 1-4)
+let playHistory = JSON.parse(localStorage.getItem('saavn_history')) || {};
+
+function PlayAudio(audio_url, song_id) {
+  var audio = document.getElementById('player');
+  var source = document.getElementById('audioSource');
+  source.src = audio_url;
+  
+  // Existing logic to update UI (Lines 10-15)
+  var name = document.getElementById(song_id+"-n").textContent;
+  var album = document.getElementById(song_id+"-a").textContent;
+  var image = document.getElementById(song_id+"-i").getAttribute("src");
+    
+  document.title = name + " - " + album;
+  document.getElementById("player-name").innerHTML = name;
+  document.getElementById("player-album").innerHTML = album;
+  document.getElementById("player-image").setAttribute("src", image);
+
+  // New: Track history and Auto-Play Logic (Lines 20-40)
+  playHistory[song_id] = (playHistory[song_id] || 0) + 1;
+  localStorage.setItem('saavn_history', JSON.stringify(playHistory));
+
+  audio.load();
+  audio.play();
+
+  // Auto-play the next "Recommended" song when this one ends
+  audio.onended = async function() {
+      console.log("Song ended, fetching recommendation based on choice: " + song_id);
+      const recUrl = `https://jiosaavn-api-privatecvc2.vercel.app/songs/${song_id}/suggestions`;
+      try {
+          const response = await fetch(recUrl);
+          const json = await response.json();
+          if (json.data && json.data.length > 0) {
+              // Picks the first recommendation from the API
+              const nextSong = json.data[0];
+              const bitrate = document.getElementById('saavn-bitrate').value;
+              // Link logic based on your selected bitrate (cite: 6)
+              const nextUrl = nextSong.downloadUrl[bitrate]?.link || nextSong.downloadUrl[3].link;
+              
+              // Trigger the next song automatically
+              PlayAudio(nextUrl, nextSong.id);
+          }
+      } catch (e) {
+          console.error("Auto-play failed", e);
+      }
+  };
+};
+
 function PlayAudio(audio_url, song_id) {
     
   var audio = document.getElementById('player');
