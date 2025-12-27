@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <!--
-Enhanced Version 2.3
-Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timeline, Modern UI
+Enhanced Version 2.6
+Features: 
+- Context-Aware Load More (Fixed)
+- Smart Artist Content Fetching (Profile + Songs fallback)
+- Album/Playlist/Artist Pagination
+- Ghost Reference API Structure Integration
 -->
 <head>
     <meta charset="utf-8">
@@ -201,25 +205,43 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
             text-overflow: ellipsis;
         }
 
-        /* Playlist Circles */
-        .playlist-item {
+        /* SCROLLABLE SECTIONS */
+        .scroll-item {
             display: inline-block;
-            width: 120px;
+            width: 130px;
             margin-right: 15px;
             text-align: center;
             cursor: pointer;
+            vertical-align: top;
         }
-        .playlist-img {
+        .scroll-img {
             width: 100%;
             aspect-ratio: 1;
-            border-radius: 50%;
-            border: 2px solid #333;
-            padding: 3px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            padding: 2px;
             transition: border-color 0.2s;
             margin-bottom: 8px;
+            object-fit: cover;
+            background: #222;
         }
-        .playlist-item:hover .playlist-img {
+        .rounded-circle-img {
+            border-radius: 50%;
+        }
+        .scroll-item:hover .scroll-img {
             border-color: var(--primary);
+        }
+        .scroll-title {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: #ddd;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .scroll-subtitle {
+            font-size: 0.75rem;
+            color: #888;
         }
 
         /* --- CUSTOM AUDIO PLAYER --- */
@@ -327,7 +349,7 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
             background: var(--primary);
         }
 
-        /* Timeline / Slider */
+        /* Timeline */
         .timeline-container {
             width: 100%;
             display: flex;
@@ -338,55 +360,25 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
             font-variant-numeric: tabular-nums;
         }
         
-        /* Custom Range Slider */
         input[type=range] {
             -webkit-appearance: none;
             width: 100%;
             background: transparent;
             cursor: pointer;
-            height: 10px; /* larger touch area */
+            height: 10px;
             margin: 0;
         }
         input[type=range]:focus { outline: none; }
-        
-        /* Webkit Slider Track */
         input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            background: #444;
-            border-radius: 2px;
+            width: 100%; height: 4px; background: #444; border-radius: 2px;
         }
-        /* Webkit Slider Thumb */
         input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 12px;
-            width: 12px;
-            border-radius: 50%;
-            background: var(--primary);
-            margin-top: -4px; /* center thumb */
-            transition: transform 0.1s;
-            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            -webkit-appearance: none; height: 12px; width: 12px; border-radius: 50%; background: var(--primary); margin-top: -4px; transition: transform 0.1s; box-shadow: 0 0 5px rgba(0,0,0,0.5);
         }
-        input[type=range]:hover::-webkit-slider-thumb {
-            transform: scale(1.2);
-        }
-        
-        /* Firefox Track/Thumb */
-        input[type=range]::-moz-range-track {
-            width: 100%;
-            height: 4px;
-            background: #444;
-            border-radius: 2px;
-        }
-        input[type=range]::-moz-range-thumb {
-            height: 12px;
-            width: 12px;
-            border: none;
-            border-radius: 50%;
-            background: var(--primary);
-        }
+        input[type=range]:hover::-webkit-slider-thumb { transform: scale(1.2); }
+        input[type=range]::-moz-range-track { width: 100%; height: 4px; background: #444; border-radius: 2px; }
+        input[type=range]::-moz-range-thumb { height: 12px; width: 12px; border: none; border-radius: 50%; background: var(--primary); }
 
-        /* Actions Section (Right side) */
         .player-actions {
             width: 30%;
             display: flex;
@@ -397,54 +389,23 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
 
         /* Mobile Adjustments */
         @media (max-width: 768px) {
-            .player-actions { display: none; } /* hide volume/extras on mobile to save space */
-            
-            /* Rebalance width for controls */
+            .player-actions { display: none; }
             .player-info { width: 55%; }
             .player-controls { width: 45%; }
-            
-            .timeline-container { 
-                position: absolute; 
-                top: -8px; 
-                left: 0; 
-                right: 0; 
-                padding: 0 10px;
-                gap: 0;
-            }
-            .time-display { display: none; } /* hide numbers on mobile timeline overlay */
+            .timeline-container { position: absolute; top: -8px; left: 0; right: 0; padding: 0 10px; gap: 0; }
+            .time-display { display: none; }
             input[type=range]::-webkit-slider-runnable-track { height: 3px; background: rgba(255,255,255,0.2); }
-            input[type=range]::-webkit-slider-thumb { width: 0; height: 0; box-shadow: none; } /* Hide thumb */
-            
-            /* Controls Row */
-            .control-buttons { 
-                margin-bottom: 0; 
-                gap: 12px; /* Tighter gap for mobile */
-            }
-            
-            /* Ensure buttons are visible */
+            input[type=range]::-webkit-slider-thumb { width: 0; height: 0; box-shadow: none; }
+            .control-buttons { margin-bottom: 0; gap: 12px; }
             .btn-skip-back, .btn-skip-fwd { display: flex !important; font-size: 1.2rem; } 
-            
-            /* Adjust play button size */
             .btn-play { width: 35px; height: 35px; font-size: 1rem; }
-            
-            /* Reduce Info Text size */
             .player-thumb { width: 40px; height: 40px; }
             .player-text h6 { max-width: 120px; font-size: 0.85rem; }
             .player-text p { max-width: 120px; font-size: 0.7rem; }
         }
         
-        /* Utility */
-        .loader {
-            display: flex;
-            justify-content: center;
-            padding: 40px;
-            color: var(--primary);
-        }
-        .scrolling-wrapper {
-            overflow-x: auto;
-            white-space: nowrap;
-            padding-bottom: 10px;
-        }
+        .loader { display: flex; justify-content: center; padding: 40px; color: var(--primary); }
+        .scrolling-wrapper { overflow-x: auto; white-space: nowrap; padding-bottom: 10px; margin-bottom: 20px; -webkit-overflow-scrolling: touch; }
         .scrolling-wrapper::-webkit-scrollbar { height: 4px; }
         .scrolling-wrapper::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
 
@@ -481,7 +442,6 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                 </form>
             </div>
 
-            <!-- Bitrate hidden setting -->
             <select id="saavn-bitrate" style="display:none;">
                 <option value="4">320kbps</option>
                 <option value="3" selected>160kbps</option>
@@ -495,14 +455,28 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
 
     <div class="container mt-4">
         
+        <!-- Artists -->
+        <div id="artist-section" style="display:none;">
+             <div class="d-flex justify-content-between align-items-end mb-3">
+                <h5 class="font-weight-bold mb-0">Artists</h5>
+            </div>
+            <div id="saavn-artists" class="scrolling-wrapper"></div>
+        </div>
+
         <!-- Playlists -->
         <div id="playlist-section" style="display:none;">
             <div class="d-flex justify-content-between align-items-end mb-3">
-                <h5 class="font-weight-bold mb-0">Top Playlists</h5>
+                <h5 class="font-weight-bold mb-0">Playlists</h5>
             </div>
-            <div id="saavn-playlists" class="scrolling-wrapper">
-                <!-- Playlist Items -->
+            <div id="saavn-playlists" class="scrolling-wrapper"></div>
+        </div>
+
+        <!-- Albums -->
+        <div id="album-section" style="display:none;">
+            <div class="d-flex justify-content-between align-items-end mb-3">
+                <h5 class="font-weight-bold mb-0">Albums</h5>
             </div>
+            <div id="saavn-albums" class="scrolling-wrapper"></div>
         </div>
 
         <!-- Songs -->
@@ -510,9 +484,7 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
             <h5 class="font-weight-bold mb-0" id="section-title">Featured Songs</h5>
         </div>
         
-        <div id="saavn-results" class="row">
-            <!-- Song Cards injected here -->
-        </div>
+        <div id="saavn-results" class="row"></div>
         
         <div class="text-center mt-4 mb-5">
             <button id="loadmore" class="btn btn-outline-light rounded-pill px-4" style="display:none;">Load More</button>
@@ -521,55 +493,43 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
 
     <!-- CUSTOM PLAYER UI -->
     <div id="custom-player">
-        <!-- Progress Bar (Mobile: Top overlay, Desktop: inside controls) -->
         <div class="timeline-container d-md-none mb-2">
             <input type="range" id="mobile-seek-slider" min="0" max="100" value="0">
         </div>
 
         <div class="player-content">
-            <!-- 1. Song Info -->
+            <!-- 1. Info -->
             <div class="player-info">
                 <img id="player-img" src="https://via.placeholder.com/60" class="player-thumb">
                 <div class="player-text">
                     <h6 id="player-title">Select Song</h6>
                     <p id="player-artist">Artist</p>
                 </div>
-                <!-- Mobile Like Button -->
                  <button class="btn-control ml-3 d-md-none" id="mobile-like-btn" onclick="toggleLikeCurrent()">
                     <i class="ph ph-heart"></i>
                  </button>
             </div>
 
-            <!-- 2. Controls (Center) -->
+            <!-- 2. Controls -->
             <div class="player-controls">
                 <div class="control-buttons">
-                    <!-- Repeat Button (Enabled on Mobile) -->
                     <button class="btn-control" id="btn-repeat" onclick="toggleRepeat()" title="Repeat">
                         <i class="ph ph-repeat"></i>
                     </button>
-                    
-                    <!-- Prev Button -->
                     <button class="btn-control btn-skip-back" onclick="playPreviousSong()">
                         <i class="ph-fill ph-skip-back"></i>
                     </button>
-                    
-                    <!-- Play Button -->
                     <button class="btn-control btn-play" id="btn-play-pause" onclick="togglePlay()">
                         <i class="ph-fill ph-play" id="icon-play-pause"></i>
                     </button>
-                    
-                    <!-- Next Button -->
                     <button class="btn-control btn-skip-fwd" onclick="playNextSong()">
                         <i class="ph-fill ph-skip-forward"></i>
                     </button>
-
-                    <!-- Shuffle Button (Hidden on Mobile) -->
                     <button class="btn-control d-none d-md-block" title="Shuffle">
                         <i class="ph ph-shuffle"></i>
                     </button>
                 </div>
 
-                <!-- Desktop Timeline -->
                 <div class="timeline-container d-none d-md-flex">
                     <span class="time-display" id="curr-time">0:00</span>
                     <input type="range" id="seek-slider" min="0" max="100" value="0">
@@ -577,7 +537,7 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                 </div>
             </div>
 
-            <!-- 3. Actions (Right) -->
+            <!-- 3. Actions -->
             <div class="player-actions">
                 <button class="btn-control" id="desktop-like-btn" onclick="toggleLikeCurrent()">
                     <i class="ph ph-heart"></i>
@@ -603,6 +563,12 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
         let songsCache = {}; // id -> song object
         let likedSongs = JSON.parse(localStorage.getItem('saavn_liked')) || {};
         
+        // Search & Context State
+        let lastSearchQuery = "";
+        let pageIndex = 1;
+        let currentContext = "search"; // 'search', 'artist', 'playlist', 'album'
+        let currentContextId = null; // ID of the artist/album/playlist being viewed
+        
         // Player State
         let isPlaying = false;
         let repeatMode = 0; // 0 = None, 1 = One, 2 = All
@@ -617,7 +583,6 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
 
         /* --- INIT --- */
         $(document).ready(() => {
-            // Restore State if available
             restorePlayerState();
 
             // Tags
@@ -631,12 +596,9 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                 tagContainer.appendChild(b);
             });
 
-            // If no previous state, do initial search
-            if(queue.length === 0) {
-                doSearch('Telugu Trending');
-            }
+            if(queue.length === 0) doSearch('Telugu Trending');
 
-            // Audio Listeners
+            // Listeners
             audio.addEventListener('timeupdate', updateProgress);
             audio.addEventListener('ended', handleEnded);
             audio.addEventListener('play', () => updatePlayState(true));
@@ -645,7 +607,6 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                 document.getElementById('total-duration').innerText = formatTime(audio.duration);
             });
 
-            // Slider Listeners
             [seekSlider, mobileSeekSlider].forEach(slider => {
                 slider.addEventListener('input', (e) => {
                     const time = (audio.duration / 100) * e.target.value;
@@ -653,9 +614,32 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                 });
             });
 
-            // Save state on unload
             window.addEventListener('beforeunload', savePlayerState);
+            
+            // Context-Aware Load More
+            $('#loadmore').click(handleLoadMore);
         });
+
+        /* --- LOAD MORE LOGIC --- */
+        function handleLoadMore() {
+            pageIndex++;
+            const limit = 20;
+            
+            if (currentContext === 'search') {
+                searchSongs(lastSearchQuery, pageIndex, true);
+            } else if (currentContext === 'artist') {
+                // Try fetching songs specific endpoint for Artist
+                const url = `${API_BASE}/artists/${currentContextId}/songs?page=${pageIndex}&limit=${limit}`;
+                fetchCollection(url, 'Artist', true);
+            } else if (currentContext === 'playlist') {
+                const url = `${API_BASE}/playlists?id=${currentContextId}&page=${pageIndex}&limit=${limit}`;
+                fetchCollection(url, 'Playlist', true);
+            } else if (currentContext === 'album') {
+                // Albums usually don't have pages, but if supported:
+                const url = `${API_BASE}/albums?id=${currentContextId}&page=${pageIndex}&limit=${limit}`;
+                fetchCollection(url, 'Album', true);
+            }
+        }
 
         /* --- STATE MANAGEMENT --- */
         function savePlayerState() {
@@ -665,8 +649,6 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                 currentSongId,
                 currentTime: audio.currentTime,
                 isPlaying: !audio.paused,
-                // We only save cache for songs in the queue to save space, but for simplicity saving all current cache
-                // Real app should prune this
                 songsCache 
             };
             localStorage.setItem('saavn_player_state_v2', JSON.stringify(state));
@@ -675,7 +657,6 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
         function restorePlayerState() {
             const raw = localStorage.getItem('saavn_player_state_v2');
             if(!raw) return;
-            
             try {
                 const state = JSON.parse(raw);
                 queue = state.queue || [];
@@ -683,98 +664,101 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                 songsCache = state.songsCache || {};
                 currentSongId = state.currentSongId;
                 
-                // If we have a song pending
                 if(currentSongId && songsCache[currentSongId]) {
-                    // 1. Update UI immediately
                     updatePlayerUI(currentSongId);
                     updateLikeBtnState(currentSongId);
                     
-                    // 2. Load Audio Source
                     const song = songsCache[currentSongId];
                     const url = getSongUrl(song);
                     if(url) {
                         audio.src = url;
-                        // 3. Set Time
                         audio.currentTime = state.currentTime || 0;
-                        
-                        // 4. Render the list of current queue if it was a search result (Approximation)
-                        // If queue is from a search, we might want to re-render.
-                        // For now, we will render the cached songs in queue
                         if(queue.length > 0) {
-                           // Re-render queue items
                            const container = document.getElementById('saavn-results');
                            container.innerHTML = '';
                            queue.forEach(id => {
                                if(songsCache[id]) renderSongCard(songsCache[id], container);
                            });
                            $('#section-title').text('Resumed Queue');
-                           // Update playing class
                            $(`#card-${currentSongId}`).addClass('playing');
                         }
-
-                        // 5. Attempt Auto-Resume
                         if(state.isPlaying) {
                             const p = audio.play();
-                            if(p !== undefined) {
-                                p.catch(e => {
-                                    console.log("Auto-resume blocked by browser policy. User must click play.");
-                                    updatePlayState(false);
-                                });
-                            }
+                            if(p !== undefined) p.catch(e => updatePlayState(false));
                         } else {
-                            // Ensure UI shows pause state
                             updatePlayState(false);
                         }
                     }
                 }
-            } catch(e) {
-                console.error("Failed to restore state", e);
-            }
+            } catch(e) { console.error(e); }
         }
 
-        /* --- SEARCH --- */
+        /* --- SEARCH LOGIC --- */
         function SaavnSearch() {
             const query = document.getElementById('saavn-search-box').value.trim();
             if(query) doSearch(query);
         }
 
         async function doSearch(query) {
-            // UI Reset
+            lastSearchQuery = query;
+            pageIndex = 1;
+            currentContext = 'search';
+            currentContextId = null;
+
+            // Reset UI
             $('#section-title').text(`Results: ${query}`);
             $('#saavn-results').html('<div class="loader"><i class="ph ph-spinner ph-spin" style="font-size:2rem;"></i></div>');
             $('#playlist-section').hide();
+            $('#artist-section').hide();
+            $('#album-section').hide();
             $('#loadmore').hide();
             
-            // 1. Playlists (First page only)
+            // Fetch All Categories
             searchPlaylists(query);
+            searchAlbums(query);
+            searchArtists(query);
+            searchSongs(query, 1, false);
+        }
 
-            // 2. Songs
+        // 1. Songs
+        async function searchSongs(query, page, append) {
             try {
-                const res = await fetch(`${API_BASE}/search/songs?query=${encodeURIComponent(query)}&page=1&limit=24`);
+                const res = await fetch(`${API_BASE}/search/songs?query=${encodeURIComponent(query)}&page=${page}&limit=20`);
                 const data = await res.json();
+                const results = data.data.results || [];
+                const container = document.getElementById('saavn-results');
                 
-                if(data.data && data.data.results) {
-                    $('#saavn-results').empty();
-                    queue = []; // New search, new queue
+                if(!append) {
+                    container.innerHTML = '';
+                    queue = []; 
                     queueIndex = -1;
-                    
-                    const container = document.getElementById('saavn-results');
-                    data.data.results.forEach(song => {
-                        songsCache[song.id] = song;
+                }
+                
+                if(results.length === 0) {
+                    if(!append) container.innerHTML = '<div class="w-100 text-center text-muted">No songs found.</div>';
+                    if(append) $('#loadmore').hide(); // Hide if end of list
+                    return;
+                }
+
+                results.forEach(song => {
+                    songsCache[song.id] = song;
+                    if(!queue.includes(song.id)) {
                         queue.push(song.id);
                         renderSongCard(song, container);
-                    });
-                    
-                    if(data.data.results.length > 0) $('#loadmore').show();
-                } else {
-                    $('#saavn-results').html('<div class="w-100 text-center text-muted">No songs found.</div>');
-                }
+                    }
+                });
+
+                // Only show load more if we got results
+                if(results.length > 0) $('#loadmore').show();
+                else $('#loadmore').hide();
+
             } catch(e) {
                 console.error(e);
-                $('#saavn-results').html('<div class="w-100 text-center text-muted">Error fetching data.</div>');
+                if(!append) $('#saavn-results').html('<div class="w-100 text-center text-muted">Error fetching songs.</div>');
             }
         }
 
+        // 2. Playlists
         async function searchPlaylists(query) {
             try {
                 const res = await fetch(`${API_BASE}/search/playlists?query=${encodeURIComponent(query)}`);
@@ -785,35 +769,161 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                     container.innerHTML = '';
                     data.data.results.forEach(pl => {
                         const img = pl.image?.[2]?.link || pl.image?.[0]?.link || '';
-                        const d = document.createElement('div');
-                        d.className = 'playlist-item';
-                        d.innerHTML = `<img src="${img}" class="playlist-img"><div style="font-size:0.8rem; overflow:hidden; text-overflow:ellipsis;">${pl.title}</div>`;
-                        d.onclick = () => loadPlaylist(pl.id);
-                        container.appendChild(d);
+                        renderScrollItem(container, img, pl.title, pl.language || 'Playlist', () => loadPlaylist(pl.id), true);
                     });
                 }
             } catch(e) {}
         }
 
-        async function loadPlaylist(id) {
-            $('#saavn-results').html('<div class="loader"><i class="ph ph-spinner ph-spin" style="font-size:2rem;"></i></div>');
-            $('#playlist-section').hide();
+        // 3. Albums
+        async function searchAlbums(query) {
             try {
-                const res = await fetch(`${API_BASE}/playlists?id=${id}`);
+                const res = await fetch(`${API_BASE}/search/albums?query=${encodeURIComponent(query)}`);
                 const data = await res.json();
-                if(data.data && data.data.songs) {
-                    $('#section-title').text(data.data.name);
-                    $('#saavn-results').empty();
-                    queue = [];
-                    queueIndex = -1;
+                if(data.data && data.data.results && data.data.results.length > 0) {
+                    $('#album-section').show();
+                    const container = document.getElementById('saavn-albums');
+                    container.innerHTML = '';
+                    data.data.results.forEach(alb => {
+                        const img = alb.image?.[2]?.link || alb.image?.[0]?.link || '';
+                        renderScrollItem(container, img, alb.title, alb.music || 'Album', () => loadAlbum(alb.id), false);
+                    });
+                }
+            } catch(e) {}
+        }
+
+        // 4. Artists
+        async function searchArtists(query) {
+            try {
+                const res = await fetch(`${API_BASE}/search/artists?query=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                if(data.data && data.data.results && data.data.results.length > 0) {
+                    $('#artist-section').show();
+                    const container = document.getElementById('saavn-artists');
+                    container.innerHTML = '';
+                    data.data.results.forEach(art => {
+                        const img = art.image?.[2]?.link || art.image?.[0]?.link || '';
+                        renderScrollItem(container, img, art.name, 'Artist', () => loadArtist(art.id), true); 
+                    });
+                }
+            } catch(e) {}
+        }
+
+        /* --- LOADERS (Context Switching) --- */
+        async function loadPlaylist(id) { 
+            currentContext = 'playlist'; currentContextId = id; pageIndex = 1;
+            fetchCollection(`${API_BASE}/playlists?id=${id}`, 'Playlist'); 
+        }
+        
+        async function loadAlbum(id) { 
+            currentContext = 'album'; currentContextId = id; pageIndex = 1;
+            fetchCollection(`${API_BASE}/albums?id=${id}`, 'Album'); 
+        }
+        
+        async function loadArtist(id) { 
+            currentContext = 'artist'; currentContextId = id; pageIndex = 1;
+            // 1. Fetch Profile (which might have topSongs)
+            // 2. If empty, or for load more, we use the songs endpoint
+            fetchArtistCollection(id); 
+        }
+
+        // Special handler for Artists to fix "No Content"
+        async function fetchArtistCollection(id) {
+            // UI Prep
+            $('#saavn-results').html('<div class="loader"><i class="ph ph-spinner ph-spin" style="font-size:2rem;"></i></div>');
+            $('#playlist-section').hide(); $('#album-section').hide(); $('#artist-section').hide(); $('#loadmore').hide();
+
+            try {
+                // First try getting main artist info
+                const res = await fetch(`${API_BASE}/artists?id=${id}`);
+                const data = await res.json();
+                const d = data.data || {};
+                
+                // Get songs from topSongs if available
+                let items = d.topSongs || d.top_songs || [];
+                
+                const title = d.name || "Artist Details";
+                $('#section-title').text(`Artist: ${title}`);
+                $('#saavn-results').empty();
+                queue = [];
+                queueIndex = -1;
+                
+                // If topSongs found, render them
+                if (items.length > 0) {
                     const container = document.getElementById('saavn-results');
-                    data.data.songs.forEach(song => {
+                    items.forEach(song => {
                         songsCache[song.id] = song;
                         queue.push(song.id);
                         renderSongCard(song, container);
                     });
+                    $('#loadmore').show(); // Enable load more for subsequent pages
+                } else {
+                    // Fallback: If no topSongs in profile, try fetching songs directly
+                    // This handles cases where profile is lightweight
+                    console.log("No topSongs in profile, trying songs endpoint...");
+                    fetchCollection(`${API_BASE}/artists/${id}/songs?page=1&limit=20`, 'Artist', true);
                 }
-            } catch(e) { console.error(e); }
+            } catch(e) {
+                // Final Fallback
+                fetchCollection(`${API_BASE}/artists/${id}/songs?page=1&limit=20`, 'Artist', true);
+            }
+        }
+
+        // Generic Fetch for Collections (Album, Playlist, Artist Songs)
+        async function fetchCollection(url, type, append = false) {
+            if(!append) {
+                $('#saavn-results').html('<div class="loader"><i class="ph ph-spinner ph-spin" style="font-size:2rem;"></i></div>');
+                $('#playlist-section').hide(); $('#album-section').hide(); $('#artist-section').hide(); $('#loadmore').hide();
+            }
+            
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                const d = data.data || {};
+                
+                // Normalized items array
+                const items = d.songs || d.results || []; 
+                const title = d.name || d.title || (type + " Details");
+
+                if(!append && type !== 'Artist') $('#section-title').text(`${type}: ${title}`);
+                
+                const container = document.getElementById('saavn-results');
+                if(!append) {
+                    container.innerHTML = '';
+                    queue = [];
+                    queueIndex = -1;
+                }
+
+                if(items.length > 0) {
+                    items.forEach(song => {
+                        songsCache[song.id] = song;
+                        if(!queue.includes(song.id)) {
+                            queue.push(song.id);
+                            renderSongCard(song, container);
+                        }
+                    });
+                    $('#loadmore').show();
+                } else {
+                    if(!append) $('#saavn-results').html('<div class="w-100 text-center text-muted">Empty collection.</div>');
+                    else $('#loadmore').hide(); // End of list
+                }
+            } catch(e) {
+                console.error(e);
+                if(!append) $('#saavn-results').html('<div class="w-100 text-center text-muted">Failed to load.</div>');
+            }
+        }
+
+        /* --- RENDERERS --- */
+        function renderScrollItem(container, img, title, sub, onClick, isCircle) {
+            const div = document.createElement('div');
+            div.className = 'scroll-item';
+            div.innerHTML = `
+                <img src="${img}" class="scroll-img ${isCircle ? 'rounded-circle-img' : ''}" loading="lazy">
+                <div class="scroll-title">${title}</div>
+                <div class="scroll-subtitle">${sub}</div>
+            `;
+            div.onclick = onClick;
+            container.appendChild(div);
         }
 
         function renderSongCard(song, container) {
@@ -839,10 +949,14 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
         }
 
         /* --- PLAYER LOGIC --- */
-
         function getSongUrl(song) {
              try {
-                return song.downloadUrl?.[4]?.link || song.downloadUrl?.[song.downloadUrl.length-1]?.link;
+                if (song.downloadUrl) {
+                    for (let i = 4; i >= 0; i--) {
+                        if (song.downloadUrl[i]) return song.downloadUrl[i].link;
+                    }
+                }
+                return "";
             } catch(e) { return ""; }
         }
 
@@ -857,7 +971,6 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
             document.getElementById('player-artist').innerText = song.primaryArtists || song.album.name || "";
             document.getElementById('player-img').src = img;
             
-            // Highlight Card
             $('.song-card').removeClass('playing');
             $(`#card-${id}`).addClass('playing');
         }
@@ -866,7 +979,6 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
             const song = songsCache[id];
             if(!song) return;
 
-            // If clicking the same song, just toggle play
             if(currentSongId === id && audio.src) {
                 togglePlay();
                 return;
@@ -875,18 +987,14 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
             currentSongId = id;
             queueIndex = queue.indexOf(id);
 
-            // Update UI
             updatePlayerUI(id);
             updateLikeBtnState(id);
 
-            // Play Audio
             const url = getSongUrl(song);
             if(url) {
                 audio.src = url;
                 audio.play().catch(e => console.log("Autoplay blocked", e));
-                savePlayerState(); // Save state immediately on new song
-            } else {
-                console.error("No URL found");
+                savePlayerState(); 
             }
         }
 
@@ -897,19 +1005,15 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
 
         function updatePlayState(playing) {
             isPlaying = playing;
-            if(playing) {
-                playBtnIcon.classList.remove('ph-play');
-                playBtnIcon.classList.add('ph-pause');
-            } else {
-                playBtnIcon.classList.remove('ph-pause');
-                playBtnIcon.classList.add('ph-play');
-            }
+            const icon = playing ? 'ph-pause' : 'ph-play';
+            playBtnIcon.classList.remove('ph-play', 'ph-pause');
+            playBtnIcon.classList.add(icon);
         }
 
         function playNextSong() {
             if(queue.length === 0) return;
             let next = queueIndex + 1;
-            if(next >= queue.length) next = 0; // Loop list
+            if(next >= queue.length) next = 0; 
             playSong(queue[next]);
         }
 
@@ -922,11 +1026,9 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
 
         function handleEnded() {
             if(repeatMode === 1) {
-                // Repeat One
                 audio.currentTime = 0;
                 audio.play();
             } else {
-                // Repeat All / None (For now just loop queue)
                 playNextSong();
             }
         }
@@ -934,17 +1036,11 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
         /* --- TIMELINE --- */
         function updateProgress() {
             const curr = audio.currentTime;
-            const dur = audio.duration || 1; // avoid /0
-            
-            // Format time
+            const dur = audio.duration || 1;
             document.getElementById('curr-time').innerText = formatTime(curr);
-            
-            // Update sliders
             const pct = (curr / dur) * 100;
             seekSlider.value = pct;
             mobileSeekSlider.value = pct;
-            
-            // Visual progress fill
             seekSlider.style.background = `linear-gradient(to right, var(--primary) ${pct}%, #444 ${pct}%)`;
         }
 
@@ -959,20 +1055,15 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
         function toggleRepeat() {
             repeatMode++;
             if(repeatMode > 2) repeatMode = 0;
-            
             const icon = repeatBtn.querySelector('i');
             repeatBtn.classList.remove('active');
-            
             if(repeatMode === 0) {
-                // Off
                 icon.className = 'ph ph-repeat';
                 icon.style.color = '#ddd';
             } else if (repeatMode === 1) {
-                // One
                 icon.className = 'ph-fill ph-repeat-once';
                 icon.style.color = 'var(--primary)';
             } else {
-                // All
                 icon.className = 'ph-fill ph-repeat';
                 icon.style.color = 'var(--primary)';
             }
@@ -982,30 +1073,25 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
             if(!currentSongId) return;
             const id = currentSongId;
             const song = songsCache[id];
-            
-            if(likedSongs[id]) {
-                delete likedSongs[id];
-            } else {
-                likedSongs[id] = song;
-            }
+            if(likedSongs[id]) delete likedSongs[id];
+            else likedSongs[id] = song;
             localStorage.setItem('saavn_liked', JSON.stringify(likedSongs));
             updateLikeBtnState(id);
         }
 
         function updateLikeBtnState(id) {
             const isLiked = !!likedSongs[id];
-            // Desktop
-            const dBtn = document.getElementById('desktop-like-btn').querySelector('i');
-            dBtn.className = isLiked ? 'ph-fill ph-heart text-danger' : 'ph ph-heart';
-            // Mobile
-            const mBtn = document.getElementById('mobile-like-btn').querySelector('i');
-            mBtn.className = isLiked ? 'ph-fill ph-heart text-danger' : 'ph ph-heart';
+            const cls = isLiked ? 'ph-fill ph-heart text-danger' : 'ph ph-heart';
+            document.getElementById('desktop-like-btn').querySelector('i').className = cls;
+            document.getElementById('mobile-like-btn').querySelector('i').className = cls;
         }
 
         function showLibrary() {
             $('#section-title').text('My Library');
             $('#saavn-results').empty();
             $('#playlist-section').hide();
+            $('#artist-section').hide();
+            $('#album-section').hide();
             $('#loadmore').hide();
             
             const ids = Object.keys(likedSongs);
@@ -1022,7 +1108,6 @@ Features: Persistence (Resume after refresh), Mobile Controls, Draggable Timelin
                 renderSongCard(likedSongs[id], container);
             });
         }
-
     </script>
 </body>
 </html>
